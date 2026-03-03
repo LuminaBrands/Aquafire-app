@@ -1,0 +1,1822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vapor Pure - Water Softener Replacement Calculator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #38b6ff;
+      --primary-dark: #1a9ae0;
+      --primary-darker: #0d7cc0;
+      --primary-light: #6fcbff;
+      --primary-lightest: #e8f7ff;
+      --bg: #f0f6fa;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --text-light: #64748b;
+      --border: #e2e8f0;
+      --radius: 16px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.04);
+      --shadow-lg: 0 4px 8px rgba(0,0,0,0.06), 0 12px 28px rgba(0,0,0,0.08);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, var(--primary-darker) 0%, var(--primary) 45%, var(--primary-light) 100%);
+      color: white;
+      padding: 1.25rem 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      top: -60%;
+      left: 20%;
+      width: 60%;
+      height: 200%;
+      background: radial-gradient(ellipse, rgba(255,255,255,0.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .header-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.85rem;
+      position: relative;
+    }
+
+    .header-logo img {
+      height: 48px;
+      width: auto;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.15));
+    }
+
+    /* ── Container & Bento Grid ── */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1.25rem 1rem 3rem;
+    }
+
+    .bento-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      grid-template-areas:
+        "hardness map"
+        "fireplace usage"
+        "result result";
+    }
+
+    /* ── Card Base ── */
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.35rem;
+      border: 1px solid rgba(56,182,255,0.07);
+      background-image: linear-gradient(160deg, #ffffff 0%, #f9fcff 100%);
+      transition: box-shadow 0.25s ease;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-lg);
+    }
+
+    .hardness-card { grid-area: hardness; }
+    .map-card { grid-area: map; }
+    .fireplace-card { grid-area: fireplace; }
+    .usage-card { grid-area: usage; }
+    /* softener is now per-fireplace row */
+    .result-area { grid-area: result; }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--primary-dark);
+      margin-bottom: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .card-title .step {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .card-title .icon {
+      font-size: 1rem;
+    }
+
+    /* ── Form Elements ── */
+    .form-group { margin-bottom: 0.85rem; }
+    .form-group:last-child { margin-bottom: 0; }
+
+    label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 0.3rem;
+      font-size: 0.88rem;
+    }
+
+    label .hint {
+      font-weight: 400;
+      color: var(--text-light);
+      font-size: 0.8rem;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.92rem;
+      color: var(--text);
+      background: white;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(56,182,255,0.15);
+    }
+
+    /* ── Autocomplete ── */
+    .search-wrapper { position: relative; }
+    .search-wrapper input { padding-right: 2.2rem; }
+
+    .search-icon {
+      position: absolute;
+      right: 0.65rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-light);
+      pointer-events: none;
+      font-size: 0.9rem;
+    }
+
+    .autocomplete-list {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1.5px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+    }
+
+    .autocomplete-list.active { display: block; }
+
+    .autocomplete-item {
+      padding: 0.45rem 0.75rem;
+      cursor: pointer;
+      font-size: 0.85rem;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.15s;
+    }
+
+    .autocomplete-item:last-child { border-bottom: none; }
+    .autocomplete-item:hover,
+    .autocomplete-item.highlighted { background: var(--primary-lightest); }
+
+    .autocomplete-item .ppm-badge {
+      background: var(--primary-lightest);
+      color: var(--primary-dark);
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .autocomplete-item:hover .ppm-badge,
+    .autocomplete-item.highlighted .ppm-badge {
+      background: var(--primary);
+      color: white;
+    }
+
+    /* ── Hardness Display ── */
+    .water-hardness-display {
+      display: none;
+      margin-top: 0.6rem;
+      padding: 0.55rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 500;
+    }
+
+    .water-hardness-display.active {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .water-hardness-display.soft { background: #dcfce7; color: #166534; }
+    .water-hardness-display.moderate { background: #fef9c3; color: #854d0e; }
+    .water-hardness-display.hard { background: #fed7aa; color: #9a3412; }
+    .water-hardness-display.very-hard { background: #fecaca; color: #991b1b; }
+
+    /* ── Hardness Scale ── */
+    .hardness-scale {
+      margin-top: 0.75rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .hardness-scale-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-light);
+      margin-bottom: 0.35rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .hardness-bar {
+      position: relative;
+      display: flex;
+      border-radius: 6px;
+      overflow: hidden;
+      height: 22px;
+    }
+
+    .hardness-bar-segment {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.62rem;
+      font-weight: 600;
+      white-space: nowrap;
+      line-height: 1;
+    }
+
+    .hardness-bar-segment.seg-soft {
+      background: #bbf7d0;
+      color: #166534;
+      flex: 60;
+    }
+
+    .hardness-bar-segment.seg-moderate {
+      background: #fde68a;
+      color: #854d0e;
+      flex: 60;
+    }
+
+    .hardness-bar-segment.seg-hard {
+      background: #fdba74;
+      color: #9a3412;
+      flex: 60;
+    }
+
+    .hardness-bar-segment.seg-vhard {
+      background: #fca5a5;
+      color: #991b1b;
+      flex: 60;
+    }
+
+    .hardness-bar-labels {
+      display: flex;
+      margin-top: 0.2rem;
+      font-size: 0.6rem;
+      color: var(--text-light);
+    }
+
+    .hardness-bar-labels span {
+      flex: 60;
+      text-align: center;
+    }
+
+    .hardness-scale-marker {
+      position: absolute;
+      top: -3px;
+      bottom: -3px;
+      width: 3px;
+      background: var(--text);
+      border-radius: 2px;
+      transform: translateX(-50%);
+      box-shadow: 0 0 0 2px white, 0 0 4px rgba(0,0,0,0.3);
+      transition: left 0.4s ease;
+      display: none;
+      z-index: 2;
+    }
+
+    .hardness-scale-marker.active {
+      display: block;
+    }
+
+    /* ── City Name Display ── */
+    .city-name-display {
+      display: none;
+      margin-top: 0.45rem;
+      padding: 0.35rem 0.65rem;
+      border-radius: 6px;
+      background: var(--primary-lightest);
+      color: var(--primary-dark);
+      font-size: 0.82rem;
+      font-weight: 500;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .city-name-display.active {
+      display: flex;
+    }
+
+    .city-name-display .city-icon {
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+
+    .or-divider {
+      text-align: center;
+      color: var(--text-light);
+      font-size: 0.78rem;
+      margin: 0.6rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .or-divider::before, .or-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .data-source {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--text-light);
+      margin-top: 0.5rem;
+      line-height: 1.4;
+    }
+
+    .data-source a { color: var(--primary-dark); text-decoration: none; }
+    .data-source a:hover { text-decoration: underline; }
+
+    /* ── Map Card ── */
+    .tile-map-wrapper {
+      position: relative;
+    }
+
+    .tile-map {
+      display: grid;
+      grid-template-columns: repeat(26, 1fr);
+      grid-template-rows: repeat(18, 1fr);
+      gap: 1.5px;
+      max-width: 100%;
+    }
+
+    .state-tile {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 2px;
+      font-size: 0.4rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      letter-spacing: 0.1px;
+      position: relative;
+      line-height: 1;
+    }
+
+    .state-tile:hover {
+      transform: scale(1.15);
+      z-index: 2;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+
+    .state-tile.active {
+      box-shadow: 0 0 0 1.5px white, 0 0 0 2.5px var(--primary-dark);
+      transform: scale(1.1);
+      z-index: 3;
+      animation: tilePulse 2s ease-in-out infinite;
+    }
+
+    @keyframes tilePulse {
+      0%, 100% { box-shadow: 0 0 0 1.5px white, 0 0 0 2.5px var(--primary-dark); }
+      50% { box-shadow: 0 0 0 1.5px white, 0 0 0 2.5px var(--primary-dark), 0 0 6px rgba(56,182,255,0.5); }
+    }
+
+    .map-legend {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-top: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.68rem;
+      color: var(--text-light);
+      font-weight: 500;
+    }
+
+    .legend-color {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .map-city-label {
+      text-align: center;
+      margin-top: 0.5rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--primary-dark);
+      min-height: 1.2em;
+    }
+
+    /* ── Fireplace Config ── */
+    .fireplace-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-end;
+      margin-bottom: 0.5rem;
+    }
+
+    .fireplace-row .form-group {
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    .fireplace-row .remove-btn {
+      padding: 0.55rem 0.65rem;
+      background: #fef2f2;
+      color: #dc2626;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+
+    .fireplace-row .remove-btn:hover { background: #fecaca; }
+
+    .add-fireplace-btn {
+      background: none;
+      border: 1.5px dashed var(--border);
+      border-radius: 8px;
+      padding: 0.4rem 0.75rem;
+      color: var(--primary);
+      font-size: 0.82rem;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+
+    .add-fireplace-btn:hover {
+      border-color: var(--primary);
+      background: var(--primary-lightest);
+    }
+
+    .total-segments {
+      margin-top: 0.4rem;
+      font-size: 0.8rem;
+      color: var(--text-light);
+    }
+
+    .total-segments strong { color: var(--text); }
+
+    /* ── Per-row softener select ── */
+    .fireplace-row .fp-softener-group { flex: 0.8; }
+    .fireplace-row .fp-softener-group select { font-size: 0.82rem; }
+
+    /* ── Sliders ── */
+    .slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .range-display {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.15rem;
+    }
+
+    .range-value {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      padding: 0.08rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 5px;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--primary-lightest) 0%, var(--border) 100%);
+      outline: none;
+      margin-top: 0.15rem;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-dark) 100%);
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-dark) 100%);
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+
+    /* ── Result Card ── */
+    .result-area .no-result {
+      text-align: center;
+      padding: 1rem;
+      color: var(--text-light);
+      font-size: 0.88rem;
+    }
+
+    .result-inner {
+      display: none;
+      text-align: center;
+      background: linear-gradient(135deg, var(--primary-darker) 0%, var(--primary) 50%, var(--primary-light) 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 1.5rem 1.25rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .result-inner::before {
+      content: '';
+      position: absolute;
+      top: -30%;
+      right: -20%;
+      width: 50%;
+      height: 120%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .result-inner.active { display: block; }
+
+    .result-inner .result-label {
+      font-size: 0.82rem;
+      opacity: 0.85;
+      margin-bottom: 0.15rem;
+      position: relative;
+    }
+
+    .result-inner .result-value {
+      font-size: 2.6rem;
+      font-weight: 700;
+      line-height: 1.1;
+      position: relative;
+    }
+
+    .result-inner .result-unit {
+      font-size: 0.92rem;
+      opacity: 0.85;
+      margin-bottom: 0.85rem;
+      position: relative;
+    }
+
+    .result-inner .result-breakdown {
+      background: rgba(255,255,255,0.13);
+      border-radius: 8px;
+      padding: 0.75rem;
+      text-align: left;
+      font-size: 0.78rem;
+      line-height: 1.7;
+      position: relative;
+    }
+
+    .result-inner .result-breakdown .row {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .result-inner .result-breakdown .row .label { opacity: 0.8; }
+
+    .result-inner .result-breakdown .divider {
+      border-top: 1px solid rgba(255,255,255,0.2);
+      margin: 0.3rem 0;
+    }
+
+    /* ── Multi-Result Grid ── */
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .results-grid .result-inner {
+      display: block;
+      padding: 1.25rem 1rem;
+    }
+
+    .results-grid .result-inner .result-value {
+      font-size: 2.2rem;
+    }
+
+    .results-grid .result-inner .result-breakdown {
+      font-size: 0.74rem;
+      line-height: 1.6;
+    }
+
+    .result-config-label {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      padding: 0.15rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      position: relative;
+    }
+
+    .results-summary {
+      margin-top: 1rem;
+      text-align: center;
+      padding: 0.75rem;
+      background: linear-gradient(135deg, var(--primary-darker) 0%, var(--primary) 50%, var(--primary-light) 100%);
+      color: white;
+      border-radius: 12px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .results-summary::before {
+      content: '';
+      position: absolute;
+      top: -30%;
+      right: -20%;
+      width: 50%;
+      height: 120%;
+      background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .results-summary span {
+      position: relative;
+    }
+
+    /* ── 12-Month Warning ── */
+    .replace-warning {
+      margin-top: 0.75rem;
+      padding: 0.65rem 0.9rem;
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      border-radius: 10px;
+      color: #92400e;
+      font-size: 0.82rem;
+      font-weight: 500;
+      line-height: 1.5;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .replace-warning .warn-icon {
+      flex-shrink: 0;
+      font-size: 1.1rem;
+      line-height: 1.3;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .bento-grid {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "hardness"
+          "map"
+          "fireplace"
+          "usage"
+          "result";
+        gap: 0.75rem;
+      }
+
+      .container { padding: 0.75rem 0.75rem 2rem; }
+      header { padding: 0.85rem 0.75rem; }
+      .header-logo img { height: 40px; }
+      .card { padding: 1rem; }
+
+      /* ── Card Titles ── */
+      .card-title {
+        font-size: 0.9rem;
+        margin-bottom: 0.65rem;
+      }
+
+      /* ── Form Elements ── */
+      label { font-size: 0.84rem; }
+      input[type="text"],
+      input[type="number"],
+      select {
+        padding: 0.6rem 0.75rem;
+        font-size: 0.9rem;
+      }
+
+      /* ── Hardness Display ── */
+      .water-hardness-display { font-size: 0.8rem; }
+      .or-divider { font-size: 0.75rem; margin: 0.5rem 0; }
+
+      /* ── Hardness Scale ── */
+      .hardness-bar { height: 24px; }
+      .hardness-bar-segment { font-size: 0.6rem; }
+      .hardness-bar-labels { font-size: 0.62rem; }
+
+      /* ── Fireplace Rows ── */
+      .fireplace-row {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        padding: 0.65rem;
+        background: var(--primary-lightest);
+        border-radius: 10px;
+        margin-bottom: 0.6rem;
+        position: relative;
+      }
+
+      .fireplace-row .form-group {
+        flex: 1 1 calc(50% - 0.25rem);
+        min-width: 0;
+      }
+
+      .fireplace-row .fp-softener-group {
+        flex: 1 1 calc(50% - 2rem);
+      }
+
+      .fireplace-row .remove-btn {
+        position: absolute;
+        top: 0.45rem;
+        right: 0.45rem;
+        padding: 0.3rem 0.5rem;
+        font-size: 0.85rem;
+        border-radius: 6px;
+      }
+
+      .fireplace-row label { font-size: 0.78rem; }
+      .fireplace-row select { font-size: 0.84rem; padding: 0.5rem 0.6rem; }
+
+      .add-fireplace-btn {
+        padding: 0.55rem 0.75rem;
+        font-size: 0.82rem;
+      }
+
+      .total-segments { font-size: 0.78rem; }
+
+      /* ── Sliders ── */
+      .slider-group { gap: 0.75rem; }
+      .range-display .hint { font-size: 0.78rem; }
+      .range-value { font-size: 0.8rem; padding: 0.1rem 0.45rem; }
+
+      input[type="range"] { height: 6px; }
+      input[type="range"]::-webkit-slider-thumb { width: 24px; height: 24px; }
+      input[type="range"]::-moz-range-thumb { width: 24px; height: 24px; }
+
+      /* ── Map ── */
+      .tile-map { gap: 1px; }
+      .state-tile { font-size: 0.3rem; border-radius: 1.5px; letter-spacing: 0; }
+      .map-legend { gap: 0.5rem; margin-top: 0.5rem; }
+      .legend-item { font-size: 0.65rem; }
+      .map-city-label { font-size: 0.75rem; }
+
+      /* ── Results ── */
+      .result-inner { padding: 1.25rem 1rem; border-radius: 10px; }
+      .result-inner .result-value { font-size: 2rem; }
+      .result-inner .result-unit { font-size: 0.85rem; margin-bottom: 0.65rem; }
+      .result-inner .result-label { font-size: 0.8rem; }
+
+      .result-inner .result-breakdown {
+        padding: 0.65rem;
+        font-size: 0.76rem;
+        line-height: 1.6;
+        border-radius: 8px;
+      }
+
+      .results-grid { grid-template-columns: 1fr; gap: 0.75rem; }
+      .results-grid .result-inner { padding: 1rem 0.85rem; }
+      .results-grid .result-inner .result-value { font-size: 1.8rem; }
+
+      .results-summary {
+        font-size: 0.78rem;
+        padding: 0.65rem;
+        border-radius: 10px;
+        line-height: 1.5;
+      }
+
+      .replace-warning {
+        font-size: 0.78rem;
+        padding: 0.55rem 0.75rem;
+        border-radius: 8px;
+      }
+
+      /* ── Data Source ── */
+      .data-source { font-size: 0.68rem; }
+    }
+
+    @media (max-width: 400px) {
+      .container { padding: 0.5rem 0.5rem 1.5rem; }
+      .card { padding: 0.85rem; }
+      .bento-grid { gap: 0.6rem; }
+
+      .fireplace-row .form-group {
+        flex: 1 1 100%;
+      }
+
+      .fireplace-row .fp-softener-group {
+        flex: 1 1 100%;
+      }
+
+      .state-tile { font-size: 0.24rem; }
+      .tile-map { gap: 1px; }
+      .hardness-bar-segment { font-size: 0.55rem; }
+      .hardness-bar-labels { font-size: 0.58rem; }
+
+      .results-summary { font-size: 0.74rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="header-logo">
+      <img src="https://cdn.shopify.com/s/files/1/0671/5562/4256/files/Asset_3_21e6786a-c276-4d29-9d74-8fabf5302656.png?v=1772213619" alt="Logo">
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="bento-grid">
+
+    <!-- Water Hardness -->
+    <div class="card hardness-card">
+      <div class="card-title">
+        <span class="step">1</span>
+        Water Hardness
+      </div>
+      <div class="form-group">
+        <label>Search by ZIP code <span class="hint">(enter your ZIP)</span></label>
+        <div class="search-wrapper">
+          <input type="text" id="zipSearch" placeholder="e.g. 85001" autocomplete="off" maxlength="5" inputmode="numeric">
+          <span class="search-icon">&#128269;</span>
+          <div class="autocomplete-list" id="autocompleteList"></div>
+        </div>
+        <div class="city-name-display" id="cityNameDisplay">
+          <span class="city-icon">&#128205;</span>
+          <span id="cityNameText"></span>
+        </div>
+        <div class="water-hardness-display" id="hardnessDisplay">
+          <span id="hardnessText"></span>
+          <span id="hardnessClassification"></span>
+        </div>
+      </div>
+      <div class="or-divider">or enter manually</div>
+      <div class="form-group">
+        <label>Water hardness in PPM <span class="hint">(parts per million)</span></label>
+        <input type="number" id="ppmInput" placeholder="e.g. 200" min="0" max="1000" step="1">
+      </div>
+      <div class="hardness-scale" id="hardnessScale">
+        <div class="hardness-scale-label">Water Hardness Scale</div>
+        <div class="hardness-bar">
+          <div class="hardness-bar-segment seg-soft">Soft</div>
+          <div class="hardness-bar-segment seg-moderate">Moderate</div>
+          <div class="hardness-bar-segment seg-hard">Hard</div>
+          <div class="hardness-bar-segment seg-vhard">Very Hard</div>
+          <div class="hardness-scale-marker" id="hardnessMarker"></div>
+        </div>
+        <div class="hardness-bar-labels">
+          <span>0–60</span>
+          <span>61–120</span>
+          <span>121–180</span>
+          <span>181+ PPM</span>
+        </div>
+      </div>
+      <div class="data-source">
+        Data from municipal reports. For accuracy, check your
+        <a href="https://www.epa.gov/ccr" target="_blank" rel="noopener">local CCR</a>
+        or use a home test kit.
+      </div>
+    </div>
+
+    <!-- Map -->
+    <div class="card map-card">
+      <div class="card-title">
+        <span class="icon">&#127758;</span>
+        US Water Hardness Map
+      </div>
+      <div class="tile-map-wrapper">
+        <div class="tile-map" id="tileMap"></div>
+      </div>
+      <div class="map-legend">
+        <span class="legend-item"><span class="legend-color" style="background:#bbf7d0"></span>Soft</span>
+        <span class="legend-item"><span class="legend-color" style="background:#fde68a"></span>Moderate</span>
+        <span class="legend-item"><span class="legend-color" style="background:#fdba74"></span>Hard</span>
+        <span class="legend-item"><span class="legend-color" style="background:#fca5a5"></span>V.Hard</span>
+      </div>
+      <div class="map-city-label" id="mapCityLabel"></div>
+    </div>
+
+    <!-- Fireplace Configuration -->
+    <div class="card fireplace-card">
+      <div class="card-title">
+        <span class="step">2</span>
+        Fireplace Configuration
+      </div>
+      <div id="fireplaceRows">
+        <div class="fireplace-row" data-index="0">
+          <div class="form-group">
+            <label>Fireplace size</label>
+            <select class="fp-size">
+              <option value="1">20" (1 segment)</option>
+              <option value="2">40" (2 segments)</option>
+              <option value="3">60" (3 segments)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Quantity</label>
+            <select class="fp-qty">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </div>
+          <div class="form-group fp-softener-group">
+            <label>Softener</label>
+            <select class="fp-softener">
+              <option value="300">300 grain</option>
+              <option value="700">700 grain</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <button class="add-fireplace-btn" id="addFireplaceBtn">+ Add another fireplace configuration</button>
+      <div class="total-segments" id="totalSegments">Total 20" segments: <strong>1</strong></div>
+    </div>
+
+    <!-- Usage -->
+    <div class="card usage-card">
+      <div class="card-title">
+        <span class="step">3</span>
+        Usage
+      </div>
+      <div class="slider-group">
+        <div class="form-group">
+          <label>Hours per day</label>
+          <div class="range-display">
+            <span class="hint">How many hours/day?</span>
+            <span class="range-value" id="hpdValue">3.5</span>
+          </div>
+          <input type="range" id="hpdSlider" min="0.5" max="24" step="0.5" value="3.5">
+        </div>
+        <div class="form-group">
+          <label>Days per week</label>
+          <div class="range-display">
+            <span class="hint">How many days/week?</span>
+            <span class="range-value" id="dpwValue">2.5</span>
+          </div>
+          <input type="range" id="dpwSlider" min="0.5" max="7" step="0.5" value="2.5">
+        </div>
+      </div>
+    </div>
+
+    <!-- Result -->
+    <div class="card result-area">
+      <div class="card-title">
+        <span class="icon">&#9201;</span>
+        Result
+      </div>
+      <div id="resultContainer"></div>
+      <div id="noResultCard">
+        <div class="no-result">
+          Enter your water hardness to see your estimated softener replacement timeline.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── ZIP Code Water Hardness Database ──
+// Compact range format: [startPrefix, endPrefix, city, state, ppm]
+// Covers all US 3-digit ZIP prefixes with estimated water hardness (PPM)
+const ZIP_RANGES = [
+  // MA
+  [10,13,"Springfield","MA",15],[14,16,"Worcester","MA",20],[17,19,"Fall River","MA",18],
+  [20,24,"Boston","MA",18],[25,26,"Cape Cod","MA",15],
+  // RI
+  [27,29,"Providence","RI",18],
+  // NH
+  [30,34,"Manchester","NH",18],[35,38,"Concord","NH",15],
+  // ME
+  [39,39,"Portsmouth","NH",18],[40,41,"Portland","ME",12],[42,44,"Lewiston","ME",15],[45,49,"Bangor","ME",18],
+  // VT
+  [50,54,"White River Jct","VT",55],[55,59,"Burlington","VT",90],
+  // CT
+  [60,62,"Hartford","CT",25],[63,64,"New Haven","CT",22],[65,66,"Bridgeport","CT",30],[67,69,"Stamford","CT",35],
+  // NJ
+  [70,73,"Newark","NJ",50],[74,76,"Trenton","NJ",95],[77,79,"Red Bank","NJ",65],[80,84,"South Jersey","NJ",70],[85,89,"Jersey City","NJ",60],
+  // NY
+  [100,104,"New York City","NY",25],[105,109,"Yonkers","NY",25],[110,114,"Queens","NY",25],[115,119,"Long Island","NY",30],
+  [120,124,"Albany","NY",45],[125,129,"Poughkeepsie","NY",55],[130,134,"Syracuse","NY",150],[135,139,"Utica","NY",100],
+  [140,144,"Buffalo","NY",120],[145,149,"Rochester","NY",130],
+  // PA
+  [150,154,"Pittsburgh","PA",130],[155,159,"Johnstown","PA",120],[160,164,"Erie","PA",120],[165,169,"State College","PA",115],
+  [170,174,"Harrisburg","PA",120],[175,179,"Lancaster","PA",130],[180,184,"Allentown","PA",100],[185,189,"Scranton","PA",90],
+  [190,196,"Philadelphia","PA",110],
+  // DE
+  [197,199,"Wilmington","DE",95],
+  // DC / MD
+  [200,205,"Washington","DC",75],[206,209,"Southern MD","MD",80],[210,212,"Baltimore","MD",80],[213,219,"Frederick","MD",120],
+  // VA
+  [220,224,"Arlington","VA",70],[225,229,"Richmond","VA",75],[230,234,"Richmond","VA",75],[235,239,"Norfolk","VA",65],
+  [240,244,"Roanoke","VA",60],[245,246,"Lynchburg","VA",55],
+  // WV
+  [247,253,"Charleston","WV",110],[254,259,"Martinsburg","WV",115],[260,264,"Wheeling","WV",120],[265,268,"Clarksburg","WV",120],
+  // NC
+  [270,274,"Greensboro","NC",45],[275,279,"Raleigh","NC",48],[280,284,"Charlotte","NC",35],[285,289,"Fayetteville","NC",40],
+  // SC
+  [290,294,"Columbia","SC",25],[295,299,"Charleston","SC",30],
+  // GA
+  [300,303,"Atlanta","GA",30],[304,307,"Macon","GA",28],[308,312,"Augusta","GA",25],[313,316,"Savannah","GA",45],
+  [317,319,"Columbus","GA",22],[398,399,"Atlanta","GA",30],
+  // FL
+  [320,324,"Jacksonville","FL",240],[325,329,"Tallahassee","FL",160],[330,334,"Miami","FL",220],[335,339,"Tampa","FL",250],
+  [340,344,"Orlando","FL",170],[345,347,"West Palm Beach","FL",190],[348,349,"Fort Myers","FL",200],
+  // AL
+  [350,352,"Birmingham","AL",48],[353,356,"Tuscaloosa","AL",30],[357,359,"Huntsville","AL",100],
+  [360,362,"Montgomery","AL",55],[363,366,"Dothan","AL",40],[367,369,"Mobile","AL",40],
+  // TN
+  [370,374,"Nashville","TN",110],[375,377,"Chattanooga","TN",80],[378,381,"Knoxville","TN",60],[382,385,"Memphis","TN",65],
+  // MS
+  [386,389,"Jackson","MS",35],[390,393,"Hattiesburg","MS",30],[394,397,"Tupelo","MS",40],
+  // KY
+  [400,406,"Louisville","KY",130],[407,412,"Frankfort","KY",135],[413,418,"Lexington","KY",140],
+  [419,422,"Bowling Green","KY",125],[423,427,"Pikeville","KY",120],
+  // OH
+  [430,436,"Columbus","OH",150],[437,438,"Zanesville","OH",160],[439,441,"Cleveland","OH",120],
+  [442,443,"Akron","OH",110],[444,446,"Youngstown","OH",125],[447,449,"Canton","OH",140],
+  [450,455,"Cincinnati","OH",140],[456,458,"Dayton","OH",300],
+  // IN
+  [460,462,"Indianapolis","IN",290],[463,466,"Gary","IN",270],[467,469,"Fort Wayne","IN",280],
+  [470,472,"South Bend","IN",310],[473,476,"Terre Haute","IN",260],[477,479,"Evansville","IN",200],
+  // MI
+  [480,483,"Detroit","MI",130],[484,487,"Flint","MI",180],[488,491,"Lansing","MI",340],
+  [492,495,"Grand Rapids","MI",300],[496,499,"Traverse City","MI",270],
+  // IA
+  [500,503,"Des Moines","IA",220],[504,509,"Waterloo","IA",260],[510,514,"Sioux City","IA",240],
+  [515,519,"Ames","IA",250],[520,524,"Dubuque","IA",280],[525,528,"Cedar Rapids","IA",300],
+  // WI
+  [530,532,"Milwaukee","WI",140],[533,535,"Madison","WI",320],[536,539,"La Crosse","WI",250],
+  [540,544,"Wausau","WI",230],[545,549,"Green Bay","WI",280],
+  // MN
+  [550,553,"Minneapolis","MN",170],[554,557,"St. Paul","MN",170],[558,560,"Duluth","MN",55],
+  [561,564,"Mankato","MN",200],[565,567,"Rochester","MN",350],
+  // SD
+  [570,573,"Sioux Falls","SD",280],[574,577,"Rapid City","SD",200],
+  // ND
+  [580,583,"Fargo","ND",250],[584,588,"Bismarck","ND",220],
+  // MT
+  [590,593,"Billings","MT",180],[594,596,"Great Falls","MT",130],[597,599,"Missoula","MT",75],
+  // IL
+  [600,605,"Chicago","IL",140],[606,608,"Chicago Suburbs","IL",250],[609,612,"Kankakee","IL",260],
+  [613,616,"Peoria","IL",270],[617,619,"Champaign","IL",290],[620,623,"Springfield","IL",260],
+  [624,627,"Quincy","IL",280],[628,629,"Centralia","IL",250],
+  // MO
+  [630,631,"St. Louis","MO",140],[632,635,"Springfield","MO",300],[636,639,"Cape Girardeau","MO",200],
+  [640,643,"Kansas City","MO",120],[644,647,"Jefferson City","MO",220],[648,651,"Joplin","MO",250],
+  [652,655,"Columbia","MO",240],[656,658,"St. Joseph","MO",180],
+  // KS
+  [660,662,"Kansas City","KS",180],[663,666,"Topeka","KS",200],[667,670,"Wichita","KS",250],
+  [671,673,"Dodge City","KS",220],[674,676,"Salina","KS",210],[677,679,"Liberal","KS",230],
+  // NE
+  [680,683,"Omaha","NE",150],[684,687,"Lincoln","NE",200],[688,691,"Grand Island","NE",180],[692,693,"North Platte","NE",170],
+  // LA
+  [700,701,"New Orleans","LA",100],[702,705,"Baton Rouge","LA",120],[706,709,"Lake Charles","LA",80],[710,714,"Shreveport","LA",45],
+  // AR
+  [716,720,"Little Rock","AR",20],[721,724,"Pine Bluff","AR",30],[725,729,"Fayetteville","AR",50],
+  // OK
+  [730,731,"Oklahoma City","OK",95],[732,733,"Oklahoma City","OK",95],[734,738,"Tulsa","OK",85],
+  [739,741,"Lawton","OK",90],[742,742,"Enid","OK",95],[743,749,"Oklahoma City","OK",95],
+  // TX
+  [750,754,"Dallas","TX",80],[755,759,"Texarkana","TX",60],[760,764,"Fort Worth","TX",100],
+  [765,769,"Waco","TX",140],[770,774,"Houston","TX",140],[775,779,"Beaumont","TX",80],
+  [780,784,"San Antonio","TX",300],[785,789,"Austin","TX",200],[790,794,"Amarillo","TX",180],
+  [795,799,"El Paso","TX",220],
+  // CO
+  [800,804,"Denver","CO",70],[805,808,"Colorado Springs","CO",75],[809,812,"Pueblo","CO",65],[813,816,"Fort Collins","CO",55],
+  // WY
+  [820,824,"Cheyenne","WY",120],[825,828,"Casper","WY",180],[829,831,"Sheridan","WY",150],
+  // ID
+  [832,834,"Boise","ID",150],[835,836,"Idaho Falls","ID",200],[837,838,"Nampa","ID",180],
+  // UT
+  [840,842,"Salt Lake City","UT",220],[843,844,"Provo","UT",280],[845,846,"Ogden","UT",250],[847,847,"St. George","UT",400],
+  // AZ
+  [850,853,"Phoenix","AZ",232],[854,856,"Tucson","AZ",200],[857,859,"Flagstaff","AZ",150],
+  [860,863,"Mesa","AZ",250],[864,865,"Scottsdale","AZ",250],
+  // NM
+  [870,874,"Albuquerque","NM",120],[875,879,"Santa Fe","NM",80],[880,884,"Las Cruces","NM",260],
+  // NV
+  [889,891,"Las Vegas","NV",274],[893,895,"Reno","NV",80],[897,898,"Carson City","NV",90],
+  // CA
+  [900,905,"Los Angeles","CA",210],[906,908,"Whittier","CA",220],[910,912,"Pasadena","CA",230],
+  [913,916,"Santa Ana","CA",260],[917,918,"Anaheim","CA",250],[919,921,"San Diego","CA",250],
+  [922,925,"San Bernardino","CA",280],[926,928,"Riverside","CA",290],[930,933,"Santa Barbara","CA",350],
+  [934,935,"Bakersfield","CA",180],[936,938,"Fresno","CA",150],[939,941,"San Francisco","CA",30],
+  [942,944,"Sacramento","CA",50],[945,948,"Oakland","CA",40],[949,951,"San Jose","CA",180],
+  [952,954,"Stockton","CA",120],[955,958,"Eureka","CA",40],[959,961,"Irvine","CA",230],
+  // HI
+  [967,968,"Honolulu","HI",90],
+  // OR
+  [970,973,"Portland","OR",10],[974,975,"Eugene","OR",15],[976,979,"Salem","OR",25],
+  // WA
+  [980,983,"Seattle","WA",25],[984,986,"Tacoma","WA",22],[987,987,"Olympia","WA",20],
+  [988,989,"Spokane","WA",120],[990,992,"Bellevue","WA",30],[993,994,"Spokane Valley","WA",120],
+  // AK
+  [995,997,"Anchorage","AK",28],[998,999,"Fairbanks","AK",160]
+];
+
+// Build lookup: 3-digit prefix → { city, state, ppm }
+const ZIP_DATA = {};
+ZIP_RANGES.forEach(([s, e, city, state, ppm]) => {
+  for (let i = s; i <= e; i++) {
+    ZIP_DATA[String(i).padStart(3, '0')] = { city, state, ppm };
+  }
+});
+
+// Build flat list for autocomplete (unique ranges)
+const ZIP_LIST = ZIP_RANGES.map(([s, e, city, state, ppm]) => ({
+  from: String(s).padStart(3, '0'),
+  to: String(e).padStart(3, '0'),
+  city, state, ppm
+}));
+
+// ── Regional Tile Map ── [row, col, abbr, city, state, ppm]
+// 26-col x 18-row grid with ~175 city/metro-level tiles
+// Arranged to approximate the geographic shape of the US
+const REGION_TILES = [
+  // Alaska
+  [0,0,"ANC","Anchorage","AK",28],[0,1,"FBK","Fairbanks","AK",160],
+  // Maine
+  [1,24,"BAN","Bangor","ME",18],[1,25,"POR","Portland","ME",12],[2,24,"LEW","Lewiston","ME",15],
+  // Vermont
+  [2,21,"BUR","Burlington","VT",90],[3,21,"WRJ","White Rvr","VT",55],
+  // New Hampshire
+  [2,22,"MAN","Manchester","NH",18],[3,22,"CON","Concord","NH",15],
+  // Washington
+  [2,1,"SEA","Seattle","WA",25],[2,2,"SPO","Spokane","WA",120],
+  [3,1,"TAC","Tacoma","WA",22],[3,2,"OLY","Olympia","WA",20],
+  // Montana
+  [2,5,"GFL","Great Falls","MT",130],[2,6,"BIL","Billings","MT",180],[3,5,"MIS","Missoula","MT",75],
+  // North Dakota
+  [2,8,"BIS","Bismarck","ND",220],[2,9,"FAR","Fargo","ND",250],
+  // Minnesota
+  [2,11,"DUL","Duluth","MN",55],[2,12,"MPL","Minneapolis","MN",170],
+  [3,11,"MNK","Mankato","MN",200],[3,12,"ROC","Rochester","MN",350],
+  // Wisconsin
+  [3,13,"WAU","Wausau","WI",230],[3,14,"GBY","Green Bay","WI",280],
+  [4,13,"MAD","Madison","WI",320],[4,14,"MIL","Milwaukee","WI",140],
+  // Michigan
+  [3,16,"TVC","Traverse Cty","MI",270],[3,17,"FLN","Flint","MI",180],
+  [4,16,"GRR","Grand Rapids","MI",300],[4,17,"DET","Detroit","MI",130],
+  // New York
+  [3,19,"BUF","Buffalo","NY",120],[3,20,"SYR","Syracuse","NY",150],
+  [4,19,"ALB","Albany","NY",45],[4,20,"NYC","New York City","NY",25],
+  // Massachusetts
+  [4,22,"SPR","Springfield","MA",15],[4,23,"WOR","Worcester","MA",20],
+  [5,22,"BOS","Boston","MA",18],[5,23,"CCO","Cape Cod","MA",15],
+  // Connecticut
+  [4,21,"HFD","Hartford","CT",25],[5,21,"NHV","New Haven","CT",22],
+  // Rhode Island
+  [5,24,"PVD","Providence","RI",18],
+  // Oregon
+  [4,1,"PDX","Portland","OR",10],[4,2,"SLM","Salem","OR",25],[5,1,"EUG","Eugene","OR",15],
+  // Idaho
+  [4,4,"BOI","Boise","ID",150],[4,5,"IFL","Idaho Falls","ID",200],[5,4,"NMP","Nampa","ID",180],
+  // Wyoming
+  [4,6,"SHE","Sheridan","WY",150],[4,7,"CAS","Casper","WY",180],[5,6,"CHE","Cheyenne","WY",120],
+  // South Dakota
+  [4,8,"RAP","Rapid City","SD",200],[4,9,"SFD","Sioux Falls","SD",280],
+  // Iowa
+  [4,11,"SXC","Sioux City","IA",240],[4,12,"WTL","Waterloo","IA",260],
+  [5,11,"DSM","Des Moines","IA",220],[5,12,"CRA","Cedar Rapids","IA",300],
+  // Illinois
+  [5,13,"CHI","Chicago","IL",140],[5,14,"PIA","Peoria","IL",270],
+  [6,13,"SPI","Springfield","IL",260],[6,14,"CHM","Champaign","IL",290],
+  // Indiana
+  [5,15,"SBN","South Bend","IN",310],[5,16,"FWA","Fort Wayne","IN",280],
+  [6,15,"IND","Indianapolis","IN",290],[6,16,"EVV","Evansville","IN",200],
+  // Ohio
+  [5,17,"CLE","Cleveland","OH",120],[5,18,"YNG","Youngstown","OH",125],
+  [6,17,"CMH","Columbus","OH",150],[6,18,"CIN","Cincinnati","OH",140],
+  // Pennsylvania
+  [5,19,"ERI","Erie","PA",120],[5,20,"SCR","Scranton","PA",90],
+  [6,19,"PIT","Pittsburgh","PA",130],[6,20,"PHL","Philadelphia","PA",110],
+  // New Jersey
+  [6,21,"NWK","Newark","NJ",50],[6,22,"JCY","Jersey City","NJ",60],
+  [7,21,"TRN","Trenton","NJ",95],[7,22,"SNJ","S. Jersey","NJ",70],
+  // Nevada
+  [7,3,"RNO","Reno","NV",80],[7,4,"CSN","Carson City","NV",90],[8,3,"LAS","Las Vegas","NV",274],
+  // Utah
+  [6,5,"OGD","Ogden","UT",250],[6,6,"SLC","Salt Lake City","UT",220],
+  [7,5,"PVU","Provo","UT",280],[7,6,"SGU","St. George","UT",400],
+  // Colorado
+  [6,7,"FTC","Ft Collins","CO",55],[6,8,"DEN","Denver","CO",70],
+  [7,7,"COS","Colo. Spgs","CO",75],[7,8,"PUE","Pueblo","CO",65],
+  // Nebraska
+  [6,9,"NPL","N. Platte","NE",170],[6,10,"GRI","Grand Isl.","NE",180],
+  [7,9,"LNK","Lincoln","NE",200],[7,10,"OMA","Omaha","NE",150],
+  // Missouri
+  [7,11,"KCM","Kansas City","MO",120],[7,12,"STJ","St. Joseph","MO",180],
+  [8,11,"STL","St. Louis","MO",140],[8,12,"SGF","Springfield","MO",300],
+  // Kentucky
+  [7,15,"LEX","Lexington","KY",140],[7,16,"FRA","Frankfort","KY",135],
+  [8,15,"LOU","Louisville","KY",130],[8,16,"BWG","Bowling Grn","KY",125],
+  // West Virginia
+  [7,17,"WHL","Wheeling","WV",120],[7,18,"MBG","Martinsburg","WV",115],
+  [8,17,"CHS","Charleston","WV",110],[8,18,"CKB","Clarksburg","WV",120],
+  // Virginia
+  [8,19,"ARL","Arlington","VA",70],[8,20,"ROA","Roanoke","VA",60],
+  [9,19,"RIC","Richmond","VA",75],[9,20,"NFK","Norfolk","VA",65],
+  // Maryland + DC
+  [7,23,"BAL","Baltimore","MD",80],[7,24,"FRD","Frederick","MD",120],
+  [8,23,"WDC","Washington","DC",75],[8,24,"SMD","S. Maryland","MD",80],
+  // Delaware
+  [8,25,"WLM","Wilmington","DE",95],
+  // California (vertical along coast)
+  [6,1,"EUR","Eureka","CA",40],[7,1,"SFO","San Francisco","CA",30],[7,2,"SAC","Sacramento","CA",50],
+  [8,1,"FRE","Fresno","CA",150],[9,1,"LAX","Los Angeles","CA",210],[9,2,"SAN","San Diego","CA",250],
+  // Arizona
+  [8,4,"FLG","Flagstaff","AZ",150],[8,5,"PHX","Phoenix","AZ",232],
+  [9,4,"TUS","Tucson","AZ",200],[9,5,"MSA","Mesa","AZ",250],
+  // New Mexico
+  [8,6,"SAF","Santa Fe","NM",80],[8,7,"ABQ","Albuquerque","NM",120],[9,6,"LCR","Las Cruces","NM",260],
+  // Kansas
+  [8,9,"TOP","Topeka","KS",200],[8,10,"KCK","Kansas City","KS",180],
+  [9,9,"ICT","Wichita","KS",250],[9,10,"DDC","Dodge City","KS",220],
+  // Arkansas
+  [9,11,"FAY","Fayetteville","AR",50],[9,12,"LRK","Little Rock","AR",20],[10,11,"PBF","Pine Bluff","AR",30],
+  // Tennessee
+  [9,15,"NSH","Nashville","TN",110],[9,16,"KNX","Knoxville","TN",60],
+  [10,15,"MEM","Memphis","TN",65],[10,16,"CHA","Chattanooga","TN",80],
+  // North Carolina
+  [10,19,"GBO","Greensboro","NC",45],[10,20,"RAL","Raleigh","NC",48],
+  [11,19,"CLT","Charlotte","NC",35],[11,20,"FAV","Fayetteville","NC",40],
+  // South Carolina
+  [11,21,"COL","Columbia","SC",25],[12,21,"CHL","Charleston","SC",30],
+  // Oklahoma
+  [10,9,"OKC","Okla City","OK",95],[10,10,"ENI","Enid","OK",95],
+  [11,9,"TUL","Tulsa","OK",85],[11,10,"LAW","Lawton","OK",90],
+  // Louisiana
+  [11,11,"SHV","Shreveport","LA",45],[11,12,"LCH","Lake Charles","LA",80],
+  [12,11,"BTR","Baton Rouge","LA",120],[12,12,"MSY","New Orleans","LA",100],
+  // Mississippi
+  [11,15,"TUP","Tupelo","MS",40],[11,16,"JAN","Jackson","MS",35],[12,15,"HTB","Hattiesburg","MS",30],
+  // Alabama
+  [11,17,"HSV","Huntsville","AL",100],[11,18,"BHM","Birmingham","AL",48],
+  [12,17,"MGM","Montgomery","AL",55],[12,18,"MOB","Mobile","AL",40],
+  // Georgia
+  [12,19,"ATL","Atlanta","GA",30],[12,20,"AUG","Augusta","GA",25],
+  [13,18,"MCN","Macon","GA",28],[13,19,"SAV","Savannah","GA",45],
+  // Hawaii
+  [16,1,"HNL","Honolulu","HI",90],
+  // Texas (wide shape)
+  [11,7,"AMA","Amarillo","TX",180],
+  [12,5,"ELP","El Paso","TX",220],[12,6,"DFW","Dallas","TX",80],[12,7,"FTW","Fort Worth","TX",100],[12,8,"WAC","Waco","TX",140],
+  [13,6,"SAT","San Antonio","TX",300],[13,7,"AUS","Austin","TX",200],[13,8,"HOU","Houston","TX",140],
+  // Florida (vertical peninsula)
+  [13,20,"TLH","Tallahassee","FL",160],[13,21,"JAX","Jacksonville","FL",240],
+  [14,21,"ORL","Orlando","FL",170],
+  [15,20,"TPA","Tampa","FL",250],[15,21,"WPB","W Palm Bch","FL",190],
+  [16,21,"MIA","Miami","FL",220]
+];
+
+// ── DOM Refs ──
+const zipSearch = document.getElementById('zipSearch');
+const autocompleteList = document.getElementById('autocompleteList');
+const ppmInput = document.getElementById('ppmInput');
+const hardnessDisplay = document.getElementById('hardnessDisplay');
+const hardnessText = document.getElementById('hardnessText');
+const hardnessClassification = document.getElementById('hardnessClassification');
+const hpdSlider = document.getElementById('hpdSlider');
+const dpwSlider = document.getElementById('dpwSlider');
+const hpdValue = document.getElementById('hpdValue');
+const dpwValue = document.getElementById('dpwValue');
+const fireplaceRows = document.getElementById('fireplaceRows');
+const addFireplaceBtn = document.getElementById('addFireplaceBtn');
+const totalSegments = document.getElementById('totalSegments');
+const resultContainer = document.getElementById('resultContainer');
+const noResultCard = document.getElementById('noResultCard');
+const tileMap = document.getElementById('tileMap');
+const mapCityLabel = document.getElementById('mapCityLabel');
+const cityNameDisplay = document.getElementById('cityNameDisplay');
+const cityNameText = document.getElementById('cityNameText');
+const hardnessMarker = document.getElementById('hardnessMarker');
+
+let selectedPPM = null;
+let highlightedIndex = -1;
+
+// ── Build Tile Map ──
+function getHardnessColor(ppm) {
+  if (ppm === null || ppm === undefined) return '#f1f5f9';
+  if (ppm <= 60) return '#bbf7d0';
+  if (ppm <= 120) return '#fde68a';
+  if (ppm <= 180) return '#fdba74';
+  return '#fca5a5';
+}
+
+function getHardnessTextColor(ppm) {
+  if (ppm === null || ppm === undefined) return '#94a3b8';
+  if (ppm <= 60) return '#166534';
+  if (ppm <= 120) return '#854d0e';
+  if (ppm <= 180) return '#9a3412';
+  return '#991b1b';
+}
+
+function buildMap() {
+  REGION_TILES.forEach(([r, c, abbr, city, state, ppm]) => {
+    const tile = document.createElement('div');
+    tile.className = 'state-tile';
+    tile.dataset.state = state;
+    tile.dataset.city = city;
+    tile.dataset.ppm = ppm;
+    tile.style.gridRow = r + 1;
+    tile.style.gridColumn = c + 1;
+    tile.textContent = abbr;
+    tile.style.background = getHardnessColor(ppm);
+    tile.style.color = getHardnessTextColor(ppm);
+
+    const label = ppm <= 60 ? 'Soft' : ppm <= 120 ? 'Moderate' : ppm <= 180 ? 'Hard' : 'Very Hard';
+    tile.title = `${city}, ${state}: ${ppm} PPM (${label})`;
+
+    tile.addEventListener('click', function() {
+      mapCityLabel.textContent = `📍 ${city}, ${state} — ${ppm} PPM (${label})`;
+    });
+
+    tileMap.appendChild(tile);
+  });
+}
+
+function highlightState(stateCode, cityName, ppm) {
+  document.querySelectorAll('.state-tile.active').forEach(t => t.classList.remove('active'));
+  if (stateCode) {
+    const tiles = document.querySelectorAll(`.state-tile[data-state="${stateCode}"]`);
+    tiles.forEach(t => t.classList.add('active'));
+    const firstTile = tiles[0];
+    if (firstTile) firstTile.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  mapCityLabel.textContent = cityName ? `📍 ${cityName} — ${ppm} PPM` : '';
+}
+
+// ── ZIP Code Search ──
+zipSearch.addEventListener('input', function() {
+  const query = this.value.replace(/\D/g, ''); // digits only
+  this.value = query; // enforce digits
+  highlightedIndex = -1;
+
+  if (query.length < 2) {
+    autocompleteList.classList.remove('active');
+    return;
+  }
+
+  // Match ZIP ranges whose prefix overlaps with what the user typed
+  const matches = ZIP_LIST.filter(r => {
+    if (query.length <= 3) {
+      // partial prefix: check if any prefix in range starts with query
+      const qPad = query.padEnd(3, '0');
+      const qMax = query.padEnd(3, '9');
+      return r.to >= qPad && r.from <= qMax;
+    } else {
+      // 4-5 digit ZIP: match exact 3-digit prefix
+      const prefix = query.slice(0, 3);
+      return prefix >= r.from && prefix <= r.to;
+    }
+  }).slice(0, 15);
+
+  if (matches.length === 0) {
+    autocompleteList.classList.remove('active');
+    return;
+  }
+
+  autocompleteList.innerHTML = matches.map((m, i) => {
+    const rangeLabel = m.from === m.to ? `${m.from}xx` : `${m.from}xx–${m.to}xx`;
+    return `<div class="autocomplete-item" data-index="${i}" data-ppm="${m.ppm}" data-state="${m.state}" data-city="${m.city}" data-from="${m.from}">
+      <span>${rangeLabel} &nbsp; ${m.city}, ${m.state}</span>
+      <span class="ppm-badge">${m.ppm} PPM</span>
+    </div>`;
+  }).join('');
+  autocompleteList.classList.add('active');
+
+  autocompleteList.querySelectorAll('.autocomplete-item').forEach(item => {
+    item.addEventListener('click', function() {
+      const ppm = parseInt(this.dataset.ppm);
+      const state = this.dataset.state;
+      const city = this.dataset.city;
+      const prefix = this.dataset.from;
+      const name = `${city}, ${state}`;
+      zipSearch.value = prefix.replace(/^0+/, '') || '0';
+      ppmInput.value = ppm;
+      selectedPPM = ppm;
+      autocompleteList.classList.remove('active');
+      showHardnessInfo(ppm);
+      showCityName(city, state);
+      highlightState(state, name, ppm);
+      calculate();
+    });
+  });
+
+  // Auto-select if user typed 5 digits
+  if (query.length === 5) {
+    const prefix = query.slice(0, 3);
+    const data = ZIP_DATA[prefix];
+    if (data) {
+      ppmInput.value = data.ppm;
+      selectedPPM = data.ppm;
+      showHardnessInfo(data.ppm);
+      showCityName(data.city, data.state);
+      highlightState(data.state, `${data.city}, ${data.state}`, data.ppm);
+      autocompleteList.classList.remove('active');
+      calculate();
+    }
+  }
+});
+
+zipSearch.addEventListener('keydown', function(e) {
+  const items = autocompleteList.querySelectorAll('.autocomplete-item');
+  if (!autocompleteList.classList.contains('active') || items.length === 0) return;
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    highlightedIndex = Math.min(highlightedIndex + 1, items.length - 1);
+    updateHighlight(items);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    highlightedIndex = Math.max(highlightedIndex - 1, 0);
+    updateHighlight(items);
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (highlightedIndex >= 0 && highlightedIndex < items.length) {
+      items[highlightedIndex].click();
+    }
+  } else if (e.key === 'Escape') {
+    autocompleteList.classList.remove('active');
+  }
+});
+
+function updateHighlight(items) {
+  items.forEach((it, i) => it.classList.toggle('highlighted', i === highlightedIndex));
+  if (highlightedIndex >= 0) items[highlightedIndex].scrollIntoView({ block: 'nearest' });
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.search-wrapper')) {
+    autocompleteList.classList.remove('active');
+  }
+});
+
+// ── PPM Manual Input ──
+ppmInput.addEventListener('input', function() {
+  const val = parseInt(this.value);
+  if (!isNaN(val) && val > 0) {
+    selectedPPM = val;
+    showHardnessInfo(val);
+    if (document.activeElement === ppmInput) {
+      zipSearch.value = '';
+      hideCityName();
+      highlightState(null);
+    }
+  } else {
+    selectedPPM = null;
+    hardnessDisplay.classList.remove('active');
+    hardnessMarker.classList.remove('active');
+  }
+  calculate();
+});
+
+function showHardnessInfo(ppm) {
+  let cls, label;
+  if (ppm <= 60) { cls = 'soft'; label = 'Soft'; }
+  else if (ppm <= 120) { cls = 'moderate'; label = 'Moderately Hard'; }
+  else if (ppm <= 180) { cls = 'hard'; label = 'Hard'; }
+  else { cls = 'very-hard'; label = 'Very Hard'; }
+
+  const grpg = (ppm / 17.1).toFixed(1);
+  hardnessDisplay.className = 'water-hardness-display active ' + cls;
+  hardnessText.textContent = `${ppm} PPM = ${grpg} GPG`;
+  hardnessClassification.textContent = label;
+  updateHardnessMarker(ppm);
+}
+
+function updateHardnessMarker(ppm) {
+  if (!ppm || ppm <= 0) {
+    hardnessMarker.classList.remove('active');
+    return;
+  }
+  // Scale: 0-240 PPM maps across the bar (soft 0-60, moderate 61-120, hard 121-180, vhard 181+)
+  // Each segment is 25% of the bar width
+  const maxPpm = 240;
+  const clampedPpm = Math.min(ppm, maxPpm);
+  let percent;
+  if (clampedPpm <= 60) {
+    percent = (clampedPpm / 60) * 25;
+  } else if (clampedPpm <= 120) {
+    percent = 25 + ((clampedPpm - 60) / 60) * 25;
+  } else if (clampedPpm <= 180) {
+    percent = 50 + ((clampedPpm - 120) / 60) * 25;
+  } else {
+    percent = 75 + ((clampedPpm - 180) / 60) * 25;
+  }
+  percent = Math.max(1, Math.min(99, percent));
+  hardnessMarker.style.left = percent + '%';
+  hardnessMarker.classList.add('active');
+}
+
+function showCityName(city, state) {
+  if (city && state) {
+    cityNameText.textContent = `${city}, ${state}`;
+    cityNameDisplay.classList.add('active');
+  } else {
+    cityNameDisplay.classList.remove('active');
+  }
+}
+
+function hideCityName() {
+  cityNameDisplay.classList.remove('active');
+}
+
+// ── Sliders ──
+hpdSlider.addEventListener('input', function() {
+  hpdValue.textContent = this.value;
+  calculate();
+});
+
+dpwSlider.addEventListener('input', function() {
+  dpwValue.textContent = this.value;
+  calculate();
+});
+
+// ── Fireplace Rows ──
+function getFireplaceRowHTML(index) {
+  return `<div class="fireplace-row" data-index="${index}">
+    <div class="form-group">
+      <label>Fireplace size</label>
+      <select class="fp-size">
+        <option value="1">20" (1 segment)</option>
+        <option value="2">40" (2 segments)</option>
+        <option value="3">60" (3 segments)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Quantity</label>
+      <select class="fp-qty">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+      </select>
+    </div>
+    <div class="form-group fp-softener-group">
+      <label>Softener</label>
+      <select class="fp-softener">
+        <option value="300">300 grain</option>
+        <option value="700">700 grain</option>
+      </select>
+    </div>
+    <button class="remove-btn" onclick="removeFireplace(this)" title="Remove">&times;</button>
+  </div>`;
+}
+
+addFireplaceBtn.addEventListener('click', function() {
+  const rows = fireplaceRows.querySelectorAll('.fireplace-row');
+  fireplaceRows.insertAdjacentHTML('beforeend', getFireplaceRowHTML(rows.length));
+  bindFireplaceEvents();
+  updateTotalSegments();
+  calculate();
+});
+
+function removeFireplace(btn) {
+  const rows = fireplaceRows.querySelectorAll('.fireplace-row');
+  if (rows.length <= 1) return;
+  btn.closest('.fireplace-row').remove();
+  updateTotalSegments();
+  calculate();
+}
+
+function bindFireplaceEvents() {
+  fireplaceRows.querySelectorAll('select').forEach(sel => {
+    sel.removeEventListener('change', onFireplaceChange);
+    sel.addEventListener('change', onFireplaceChange);
+  });
+}
+
+function onFireplaceChange() {
+  updateTotalSegments();
+  calculate();
+}
+
+function getTotalSegments() {
+  let total = 0;
+  fireplaceRows.querySelectorAll('.fireplace-row').forEach(row => {
+    const size = parseInt(row.querySelector('.fp-size').value);
+    const qty = parseInt(row.querySelector('.fp-qty').value);
+    total += size * qty;
+  });
+  return total;
+}
+
+function updateTotalSegments() {
+  totalSegments.innerHTML = `Total 20" segments: <strong>${getTotalSegments()}</strong>`;
+}
+
+// ── Calculation (per-fireplace with individual softeners) ──
+function formatDuration(months) {
+  let val, unit;
+  if (months >= 120) {
+    val = (months / 12).toFixed(1);
+    unit = months / 12 === 1 ? 'year' : 'years';
+  } else {
+    val = months.toFixed(1);
+    unit = 'months';
+  }
+  if (val.endsWith('.0')) val = val.slice(0, -2);
+  return { val, unit };
+}
+
+function calculate() {
+  const ppm = selectedPPM;
+  if (!ppm || ppm <= 0) {
+    resultContainer.innerHTML = '';
+    noResultCard.style.display = '';
+    return;
+  }
+
+  const hpd = parseFloat(hpdSlider.value);
+  const dpw = parseFloat(dpwSlider.value);
+  const wpm = 4.3;
+  const grpg = ppm / 17.1;
+
+  const fpResults = [];
+  let overallMinMonths = Infinity;
+
+  fireplaceRows.querySelectorAll('.fireplace-row').forEach((row, idx) => {
+    const sizeVal = parseInt(row.querySelector('.fp-size').value);
+    const qty = parseInt(row.querySelector('.fp-qty').value);
+    const capacity = parseInt(row.querySelector('.fp-softener').value);
+    const segments = sizeVal * qty;
+    const sizeLabel = sizeVal === 1 ? '20"' : sizeVal === 2 ? '40"' : '60"';
+
+    const gallonsPerMonth = hpd * 0.025 * dpw * wpm * segments;
+    const grainsPerMonth = gallonsPerMonth * grpg;
+    const months = grainsPerMonth > 0 ? capacity / grainsPerMonth : Infinity;
+
+    fpResults.push({ idx: idx + 1, sizeLabel, qty, segments, capacity, gallonsPerMonth, grainsPerMonth, months });
+    if (months < overallMinMonths) overallMinMonths = months;
+  });
+
+  noResultCard.style.display = 'none';
+
+  const isMulti = fpResults.length > 1;
+
+  if (!isMulti) {
+    // Single configuration — original single-card display
+    const fp = fpResults[0];
+    const { val: displayVal, unit: unitText } = formatDuration(fp.months);
+
+    const singleWarning = fp.months > 12
+      ? `<div class="replace-warning"><span class="warn-icon">&#9888;</span><span>Based on your usage the softener capacity lasts beyond 12 months, but <strong>we recommend replacing the softener at least once every 12 months</strong> to ensure optimal water quality and appliance protection.</span></div>`
+      : '';
+
+    resultContainer.innerHTML = `
+      <div class="result-inner active">
+        <div class="result-label">Estimated time before replacement</div>
+        <div class="result-value">${fp.months > 12 ? 12 : displayVal}</div>
+        <div class="result-unit">${fp.months > 12 ? 'months (max)' : unitText}</div>
+        <div class="result-breakdown">
+          <div class="row"><span class="label">Water hardness</span><span>${ppm} PPM (${grpg.toFixed(1)} GrPG)</span></div>
+          <div class="row"><span class="label">Usage</span><span>${hpd} hrs/day, ${dpw} days/wk</span></div>
+          <div class="divider"></div>
+          <div class="row"><span class="label">${fp.qty}&times;${fp.sizeLabel} (${fp.capacity}g softener)</span><span>${fp.segments} segments</span></div>
+          <div class="row"><span class="label">Water per month</span><span>${fp.gallonsPerMonth.toFixed(2)} gal</span></div>
+          <div class="row"><span class="label">Grains per month</span><span>${fp.grainsPerMonth.toFixed(2)}</span></div>
+          <div class="divider"></div>
+          <div class="row"><span class="label"><strong>Replace every</strong></span><span><strong>${fp.months > 12 ? '12 months (max)' : displayVal + ' ' + unitText}</strong></span></div>
+        </div>
+        ${singleWarning}
+      </div>`;
+  } else {
+    // Multiple configurations — independent side-by-side cards
+    let cardsHtml = '<div class="results-grid">';
+
+    let anyOver12 = false;
+    fpResults.forEach(fp => {
+      const { val: fpVal, unit: fpUnit } = formatDuration(fp.months);
+      const capped = fp.months > 12;
+      if (capped) anyOver12 = true;
+
+      cardsHtml += `
+        <div class="result-inner active">
+          <div class="result-config-label">Fireplace ${fp.idx}</div>
+          <div class="result-label">Replace softener in</div>
+          <div class="result-value">${capped ? 12 : fpVal}</div>
+          <div class="result-unit">${capped ? 'months (max)' : fpUnit}</div>
+          <div class="result-breakdown">
+            <div class="row"><span class="label">Size</span><span>${fp.qty}&times;${fp.sizeLabel}</span></div>
+            <div class="row"><span class="label">Segments</span><span>${fp.segments}</span></div>
+            <div class="row"><span class="label">Softener</span><span>${fp.capacity} grain</span></div>
+            <div class="divider"></div>
+            <div class="row"><span class="label">Water/month</span><span>${fp.gallonsPerMonth.toFixed(2)} gal</span></div>
+            <div class="row"><span class="label">Grains/month</span><span>${fp.grainsPerMonth.toFixed(2)}</span></div>
+            <div class="divider"></div>
+            <div class="row"><span class="label"><strong>Replace every</strong></span><span><strong>${capped ? '12 months (max)' : fpVal + ' ' + fpUnit}</strong></span></div>
+          </div>
+        </div>`;
+    });
+
+    cardsHtml += '</div>';
+
+    // Summary bar — cap soonest replacement at 12 months too
+    const cappedOverallMonths = overallMinMonths > 12 ? 12 : overallMinMonths;
+    const { val: summaryVal, unit: summaryUnit } = formatDuration(cappedOverallMonths);
+    cardsHtml += `
+      <div class="results-summary">
+        <span>&#9201; Soonest replacement: <strong>${summaryVal} ${summaryUnit}${overallMinMonths > 12 ? ' (max)' : ''}</strong> &nbsp;|&nbsp; Water hardness: ${ppm} PPM &nbsp;|&nbsp; Usage: ${hpd} hrs/day, ${dpw} days/wk</span>
+      </div>`;
+
+    if (anyOver12) {
+      cardsHtml += `<div class="replace-warning"><span class="warn-icon">&#9888;</span><span>One or more configurations show a softener capacity lasting beyond 12 months, but <strong>we recommend replacing every softener at least once every 12 months</strong> to ensure optimal water quality and appliance protection.</span></div>`;
+    }
+
+    resultContainer.innerHTML = cardsHtml;
+  }
+}
+
+// ── Init ──
+buildMap();
+bindFireplaceEvents();
+updateTotalSegments();
+</script>
+
+</body>
+</html>
